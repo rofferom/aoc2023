@@ -6,51 +6,75 @@ const INPUT: &str = include_str!("day4_input.txt");
 struct Card {
     own: HashSet<i32>,
     winning: HashSet<i32>,
+    count: usize,
 }
 
-fn solve_part1(input: &str) -> u32 {
+impl Card {
+    fn matching(&self) -> usize {
+        self.winning.intersection(&self.own).count()
+    }
+}
+
+fn load_cards(input: &str) -> Vec<Card> {
     let split_values = |s: &str| -> HashSet<i32> {
         s.split(' ')
             .filter_map(|s| {
                 let s = s.trim();
-                if s.is_empty() {
-                    None
+                if !s.is_empty() {
+                    Some(s.parse().unwrap())
                 } else {
-                    Some(s)
+                    None
                 }
             })
-            .map(|s| s.parse::<i32>().unwrap())
             .collect()
     };
 
-    let cards: Vec<_> = input
+    input
         .split('\n')
         .map(|l| {
-            let parts: Vec<_> = l.split(": ").collect();
-            let parts: Vec<_> = parts[1].split(" | ").collect();
+            let parts: Vec<_> = l.split(": ").nth(1).unwrap().split(" | ").collect();
 
-            let own = split_values(parts[0]);
-            let winning = split_values(parts[1]);
-
-            Card { own, winning }
+            Card {
+                own: split_values(parts[0]),
+                winning: split_values(parts[1]),
+                count: 1,
+            }
         })
-        .collect();
+        .collect()
+}
 
-    cards
+fn solve_part1(input: &str) -> u32 {
+    load_cards(input)
         .iter()
         .map(|c| {
-            let score = c.winning.intersection(&c.own).count() as u32;
-            if score > 0 {
-                2u32.pow(score - 1)
+            let matching = c.matching();
+            if matching > 0 {
+                2u32.pow((matching - 1) as _)
             } else {
-                score
+                0
             }
         })
         .sum()
 }
 
 fn solve_part2(input: &str) -> u32 {
-    0
+    let mut cards = load_cards(input);
+
+    for i in 0..cards.len() {
+        let matching = cards[i].matching();
+
+        let start = i + 1;
+        let mut end = start + matching;
+        if end > cards.len() {
+            end = cards.len() - 1;
+        };
+
+        for j in start..end {
+            cards[j].count += cards[i].count;
+        }
+    }
+
+    cards.iter().map(|c| c.count as u32).sum()
 }
 
 fn main() {
@@ -73,5 +97,8 @@ Card 6: 31 18 13 56 72 | 74 77 10 23 35 67 36 11";
 
         assert_eq!(solve_part1(TEST_INPUT), 13);
         assert_eq!(solve_part1(INPUT), 28750);
+
+        assert_eq!(solve_part2(TEST_INPUT), 30);
+        assert_eq!(solve_part2(INPUT), 10212704);
     }
 }
